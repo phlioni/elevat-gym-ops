@@ -19,7 +19,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   Select,
@@ -28,8 +27,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Pencil } from "lucide-react";
+import { Plus, Pencil, Trash2 } from "lucide-react";
 
 interface Profile {
   id: string;
@@ -51,6 +60,8 @@ interface Tenant {
 
 export default function AdminUsers() {
   const [open, setOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deletingUser, setDeletingUser] = useState<Profile | null>(null);
   const [editingUser, setEditingUser] = useState<Profile | null>(null);
   const [formData, setFormData] = useState({
     email: "",
@@ -72,7 +83,6 @@ export default function AdminUsers() {
 
       if (error) throw error;
 
-      // Fetch user roles separately
       const profilesWithRoles = await Promise.all(
         data.map(async (profile) => {
           const { data: rolesData } = await supabase
@@ -104,7 +114,52 @@ export default function AdminUsers() {
     },
   });
 
-  const updateUserTenantMutation = useMutation({
+  const createUserMutation = useMutation({
+    mutationFn: async (userData: typeof formData) => {
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: userData.email,
+        password: userData.password,
+        options: {
+          data: {
+            full_name: userData.full_name,
+          },
+        },
+      });
+
+      if (authError) throw authError;
+      if (!authData.user) throw new Error("Usuário não criado");
+
+      const { error: profileError } = await supabase
+        .from("profiles")
+        .update({ tenant_id: userData.tenant_id })
+        .eq("id", authData.user.id);
+
+      if (profileError) throw profileError;
+
+      const { error: roleError } = await supabase
+        .from("user_roles")
+        .insert({ user_id: authData.user.id, role: userData.role });
+
+      if (roleError) throw roleError;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-profiles"] });
+      toast({
+        title: "Sucesso",
+        description: "Usuário criado com sucesso!",
+      });
+      handleClose();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateUserMutation = useMutation({
     mutationFn: async ({ userId, tenantId }: { userId: string; tenantId: string }) => {
       const { error } = await supabase
         .from("profiles")
@@ -117,10 +172,32 @@ export default function AdminUsers() {
       queryClient.invalidateQueries({ queryKey: ["admin-profiles"] });
       toast({
         title: "Sucesso",
-        description: "Grupo do usuário atualizado com sucesso!",
+        description: "Usuário atualizado com sucesso!",
       });
-      setOpen(false);
-      setEditingUser(null);
+      handleClose();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteUserMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      const { error } = await supabase.auth.admin.deleteUser(userId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-profiles"] });
+      toast({
+        title: "Sucesso",
+        description: "Usuário excluído com sucesso!",
+      });
+      setDeleteDialogOpen(false);
+      setDeletingUser(null);
     },
     onError: (error: any) => {
       toast({
@@ -135,10 +212,20 @@ export default function AdminUsers() {
     e.preventDefault();
 
     if (editingUser) {
-      updateUserTenantMutation.mutate({
+      updateUserMutation.mutate({
         userId: editingUser.id,
         tenantId: formData.tenant_id,
       });
+    } else {
+      if (!formData.password || formData.password.length < 6) {
+        toast({
+          title: "Erro",
+          description: "Senha deve ter no mínimo 6 caracteres",
+          variant: "destructive",
+        });
+        return;
+      }
+      createUserMutation.mutate(formData);
     }
   };
 
@@ -152,6 +239,17 @@ export default function AdminUsers() {
       role: user.user_roles?.[0]?.role as "admin" | "staff" || "staff",
     });
     setOpen(true);
+  };
+
+  const handleDelete = (user: Profile) => {
+    setDeletingUser(user);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (deletingUser) {
+      deleteUserMutation.mutate(deletingUser.id);
+    }
   };
 
   const handleClose = () => {
@@ -183,6 +281,10 @@ export default function AdminUsers() {
             Gerencie usuários e seus grupos
           </p>
         </div>
+        <Button onClick={() => setOpen(true)}>
+          <Plus className="mr-2 h-4 w-4" />
+          Novo Usuário
+        </Button>
       </div>
 
       <div className="border rounded-lg">
@@ -208,13 +310,22 @@ export default function AdminUsers() {
                   </span>
                 </TableCell>
                 <TableCell className="text-right">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleEdit(profile)}
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
+                  <div className="flex justify-end gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleEdit(profile)}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDelete(profile)}
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
@@ -225,21 +336,57 @@ export default function AdminUsers() {
       <Dialog open={open} onOpenChange={handleClose}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Editar Usuário</DialogTitle>
+            <DialogTitle>
+              {editingUser ? "Editar Usuário" : "Novo Usuário"}
+            </DialogTitle>
             <DialogDescription>
-              Altere o grupo do usuário
+              {editingUser
+                ? "Altere o grupo do usuário"
+                : "Crie um novo usuário no sistema"}
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSubmit}>
             <div className="space-y-4">
               <div>
-                <Label>Nome</Label>
-                <Input value={formData.full_name} disabled />
+                <Label htmlFor="full_name">Nome Completo *</Label>
+                <Input
+                  id="full_name"
+                  value={formData.full_name}
+                  onChange={(e) =>
+                    setFormData({ ...formData, full_name: e.target.value })
+                  }
+                  disabled={!!editingUser}
+                  required
+                />
               </div>
               <div>
-                <Label>Email</Label>
-                <Input value={formData.email} disabled />
+                <Label htmlFor="email">Email *</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) =>
+                    setFormData({ ...formData, email: e.target.value })
+                  }
+                  disabled={!!editingUser}
+                  required
+                />
               </div>
+              {!editingUser && (
+                <div>
+                  <Label htmlFor="password">Senha *</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={formData.password}
+                    onChange={(e) =>
+                      setFormData({ ...formData, password: e.target.value })
+                    }
+                    placeholder="Mínimo 6 caracteres"
+                    required
+                  />
+                </div>
+              )}
               <div>
                 <Label htmlFor="tenant">Grupo *</Label>
                 <Select
@@ -261,16 +408,57 @@ export default function AdminUsers() {
                   </SelectContent>
                 </Select>
               </div>
+              {!editingUser && (
+                <div>
+                  <Label htmlFor="role">Função *</Label>
+                  <Select
+                    value={formData.role}
+                    onValueChange={(value: "admin" | "staff") =>
+                      setFormData({ ...formData, role: value })
+                    }
+                    required
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="staff">Staff</SelectItem>
+                      <SelectItem value="admin">Admin</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
             <DialogFooter className="mt-6">
               <Button type="button" variant="outline" onClick={handleClose}>
                 Cancelar
               </Button>
-              <Button type="submit">Salvar</Button>
+              <Button type="submit">
+                {editingUser ? "Salvar" : "Criar"}
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir o usuário{" "}
+              <strong>{deletingUser?.full_name}</strong>? Esta ação não pode ser
+              desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete}>
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
