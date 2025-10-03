@@ -388,6 +388,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_admin_role: {
+        Args: { user_email: string }
+        Returns: undefined
+      }
+      add_staff_role: {
+        Args: { user_email: string }
+        Returns: undefined
+      }
       get_user_tenant_id: {
         Args: { _user_id: string }
         Returns: string

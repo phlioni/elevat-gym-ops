@@ -1,4 +1,4 @@
-import { Home, Users, Package, ShoppingCart, Settings, Menu } from "lucide-react";
+import { Home, Users, Package, ShoppingCart, Settings, Menu, Shield } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import {
   Sidebar,
@@ -12,17 +12,25 @@ import {
   SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { useUserRole } from "@/hooks/useUserRole";
+import { useProfile } from "@/hooks/useProfile";
 
 const menuItems = [
-  { title: "Painel de Controle", url: "/dashboard", icon: Home },
-  { title: "Alunos", url: "/students", icon: Users },
-  { title: "Estoque", url: "/inventory", icon: Package },
-  { title: "Vendas", url: "/sales", icon: ShoppingCart },
-  { title: "Configurações", url: "/settings", icon: Settings },
+  { title: "Painel de Controle", url: "/dashboard", icon: Home, requireAdmin: false },
+  { title: "Alunos", url: "/students", icon: Users, requireAdmin: false },
+  { title: "Estoque", url: "/inventory", icon: Package, requireAdmin: false },
+  { title: "Vendas", url: "/sales", icon: ShoppingCart, requireAdmin: false },
+  { title: "Configurações", url: "/settings", icon: Settings, requireAdmin: true },
 ];
 
 export function AppSidebar() {
   const { open } = useSidebar();
+  const { data: userRole } = useUserRole();
+  const { data: profile } = useProfile();
+
+  const filteredMenuItems = menuItems.filter(item => 
+    !item.requireAdmin || userRole?.isAdmin
+  );
 
   return (
     <Sidebar collapsible="icon">
@@ -34,10 +42,17 @@ export function AppSidebar() {
               <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
                 <span className="text-primary-foreground font-bold text-lg">GH</span>
               </div>
-              <div className="flex flex-col">
+              <div className="flex flex-col flex-1">
                 <span className="font-bold text-sidebar-foreground">GymHub</span>
-                <span className="text-xs text-sidebar-foreground/70">Academia Exemplo</span>
+                <span className="text-xs text-sidebar-foreground/70">
+                  {profile?.tenants?.name || "Academia"}
+                </span>
               </div>
+              {userRole?.isAdmin && (
+                <div title="Admin">
+                  <Shield className="h-4 w-4 text-primary" />
+                </div>
+              )}
             </div>
           ) : (
             <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center mx-auto">
@@ -50,7 +65,7 @@ export function AppSidebar() {
           <SidebarGroupLabel>Menu Principal</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {menuItems.map((item) => (
+              {filteredMenuItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
                     <NavLink

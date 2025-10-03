@@ -5,6 +5,8 @@ import { LogOut, User } from "lucide-react";
 import { AppSidebar } from "./AppSidebar";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/hooks/useProfile";
+import { useUserRole } from "@/hooks/useUserRole";
+import { Badge } from "@/components/ui/badge";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -13,6 +15,7 @@ interface DashboardLayoutProps {
 export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const { signOut } = useAuth();
   const { data: profile } = useProfile();
+  const { data: userRole } = useUserRole();
 
   return (
     <SidebarProvider>
@@ -23,11 +26,18 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
             <SidebarTrigger />
             <div className="flex-1" />
             <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <User className="h-5 w-5" />
-                <span className="text-sm font-medium">{profile?.full_name}</span>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <User className="h-5 w-5" />
+                  <div className="flex flex-col">
+                    <span className="text-sm font-medium">{profile?.full_name}</span>
+                    {userRole?.isAdmin && (
+                      <Badge variant="default" className="text-xs">Admin</Badge>
+                    )}
+                  </div>
+                </div>
               </div>
-              <Button variant="ghost" size="icon" onClick={signOut}>
+              <Button variant="ghost" size="icon" onClick={signOut} title="Sair">
                 <LogOut className="h-5 w-5" />
               </Button>
             </div>
