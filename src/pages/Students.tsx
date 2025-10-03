@@ -19,38 +19,28 @@ import {
 import { StatusBadge } from "@/components/StatusBadge";
 import { Eye, Pencil, Plus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-
-const mockStudents = [
-  {
-    id: "1",
-    name: "Carlos Silva",
-    email: "carlos@email.com",
-    phone: "(11) 98765-4321",
-    plan: "Mensal",
-    status: "active",
-  },
-  {
-    id: "2",
-    name: "Maria Santos",
-    email: "maria@email.com",
-    phone: "(11) 91234-5678",
-    plan: "Trimestral",
-    status: "active",
-  },
-  {
-    id: "3",
-    name: "João Oliveira",
-    email: "joao@email.com",
-    phone: "(11) 99876-5432",
-    plan: "Anual",
-    status: "pending",
-  },
-];
+import { useStudents } from "@/hooks/useStudents";
 
 export default function Students() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const navigate = useNavigate();
+  const { students, isLoading } = useStudents();
+
+  const filteredStudents = students.filter((student: any) => {
+    const matchesSearch =
+      student.full_name.toLowerCase().includes(search.toLowerCase()) ||
+      student.email?.toLowerCase().includes(search.toLowerCase()) ||
+      student.cpf?.includes(search);
+    
+    const matchesStatus = statusFilter === "all" || student.status === statusFilter;
+    
+    return matchesSearch && matchesStatus;
+  });
+
+  if (isLoading) {
+    return <div className="text-center py-8">Carregando...</div>;
+  }
 
   return (
     <div className="space-y-6">
@@ -95,31 +85,39 @@ export default function Students() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {mockStudents.map((student) => (
-              <TableRow key={student.id}>
-                <TableCell className="font-medium">{student.name}</TableCell>
-                <TableCell>{student.email}</TableCell>
-                <TableCell>{student.phone}</TableCell>
-                <TableCell>{student.plan}</TableCell>
-                <TableCell>
-                  <StatusBadge status={student.status} />
-                </TableCell>
-                <TableCell className="text-right">
-                  <div className="flex justify-end gap-2">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => navigate(`/students/${student.id}`)}
-                    >
-                      <Eye className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon">
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                  </div>
+            {filteredStudents.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                  Nenhum aluno encontrado
                 </TableCell>
               </TableRow>
-            ))}
+            ) : (
+              filteredStudents.map((student: any) => (
+                <TableRow key={student.id}>
+                  <TableCell className="font-medium">{student.full_name}</TableCell>
+                  <TableCell>{student.email || "-"}</TableCell>
+                  <TableCell>{student.phone || "-"}</TableCell>
+                  <TableCell>{student.plans?.name || "-"}</TableCell>
+                  <TableCell>
+                    <StatusBadge status={student.status} />
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => navigate(`/students/${student.id}`)}
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon">
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
       </div>

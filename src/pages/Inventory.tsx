@@ -11,36 +11,20 @@ import {
 } from "@/components/ui/table";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Pencil, Plus, Trash2 } from "lucide-react";
-
-const mockProducts = [
-  {
-    id: "1",
-    name: "Camiseta Academia",
-    description: "Camiseta dry-fit preta",
-    price: "R$ 49,90",
-    stock: 25,
-    status: "in_stock",
-  },
-  {
-    id: "2",
-    name: "Shaker Proteína",
-    description: "Coqueteleira 600ml",
-    price: "R$ 29,90",
-    stock: 5,
-    status: "low_stock",
-  },
-  {
-    id: "3",
-    name: "Toalha Esportiva",
-    description: "Toalha microfibra",
-    price: "R$ 39,90",
-    stock: 0,
-    status: "out_of_stock",
-  },
-];
+import { useProducts } from "@/hooks/useProducts";
 
 export default function Inventory() {
   const [search, setSearch] = useState("");
+  const { products, isLoading } = useProducts();
+
+  const filteredProducts = products.filter((product: any) =>
+    product.name.toLowerCase().includes(search.toLowerCase()) ||
+    product.description?.toLowerCase().includes(search.toLowerCase())
+  );
+
+  if (isLoading) {
+    return <div className="text-center py-8">Carregando...</div>;
+  }
 
   return (
     <div className="space-y-6">
@@ -74,27 +58,35 @@ export default function Inventory() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {mockProducts.map((product) => (
-              <TableRow key={product.id}>
-                <TableCell className="font-medium">{product.name}</TableCell>
-                <TableCell>{product.description}</TableCell>
-                <TableCell>{product.price}</TableCell>
-                <TableCell>{product.stock}</TableCell>
-                <TableCell>
-                  <StatusBadge status={product.status} />
-                </TableCell>
-                <TableCell className="text-right">
-                  <div className="flex justify-end gap-2">
-                    <Button variant="ghost" size="icon">
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon">
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
+            {filteredProducts.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                  Nenhum produto encontrado
                 </TableCell>
               </TableRow>
-            ))}
+            ) : (
+              filteredProducts.map((product: any) => (
+                <TableRow key={product.id}>
+                  <TableCell className="font-medium">{product.name}</TableCell>
+                  <TableCell>{product.description || "-"}</TableCell>
+                  <TableCell>R$ {Number(product.price).toFixed(2)}</TableCell>
+                  <TableCell>{product.stock_quantity}</TableCell>
+                  <TableCell>
+                    <StatusBadge status={product.status} />
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-2">
+                      <Button variant="ghost" size="icon">
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon">
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
       </div>
