@@ -407,6 +407,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      update_user_tenant: {
+        Args: { new_tenant_id: string; user_email: string }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "admin" | "staff"

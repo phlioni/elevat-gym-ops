@@ -6,6 +6,7 @@ import { AppSidebar } from "./AppSidebar";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/hooks/useProfile";
 import { useUserRole } from "@/hooks/useUserRole";
+import { useTenantTheme } from "@/hooks/useTenantTheme";
 import { Badge } from "@/components/ui/badge";
 
 interface DashboardLayoutProps {
@@ -16,6 +17,7 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const { signOut } = useAuth();
   const { data: profile } = useProfile();
   const { data: userRole } = useUserRole();
+  useTenantTheme(); // Apply tenant theme
 
   return (
     <SidebarProvider>

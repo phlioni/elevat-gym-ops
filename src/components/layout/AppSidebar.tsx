@@ -1,4 +1,4 @@
-import { Home, Users, Package, ShoppingCart, Settings, Menu, Shield } from "lucide-react";
+import { Home, Users, Package, ShoppingCart, Settings, Menu, Shield, UserCog, Building2 } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import {
   Sidebar,
@@ -21,6 +21,11 @@ const menuItems = [
   { title: "Estoque", url: "/inventory", icon: Package, requireAdmin: false },
   { title: "Vendas", url: "/sales", icon: ShoppingCart, requireAdmin: false },
   { title: "Configurações", url: "/settings", icon: Settings, requireAdmin: true },
+];
+
+const adminMenuItems = [
+  { title: "Gestão de Grupos", url: "/admin/tenants", icon: Building2 },
+  { title: "Gestão de Usuários", url: "/admin/users", icon: UserCog },
 ];
 
 export function AppSidebar() {
@@ -85,6 +90,33 @@ export function AppSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        {userRole?.isAdmin && (
+          <SidebarGroup>
+            <SidebarGroupLabel>Administração</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {adminMenuItems.map((item) => (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton asChild>
+                      <NavLink
+                        to={item.url}
+                        className={({ isActive }) =>
+                          isActive
+                            ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                            : "hover:bg-sidebar-accent/50"
+                        }
+                      >
+                        <item.icon className="h-5 w-5" />
+                        <span>{item.title}</span>
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
       </SidebarContent>
     </Sidebar>
   );

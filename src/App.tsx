@@ -15,6 +15,8 @@ import StudentDetail from "./pages/StudentDetail";
 import Inventory from "./pages/Inventory";
 import Sales from "./pages/Sales";
 import Settings from "./pages/Settings";
+import AdminUsers from "./pages/AdminUsers";
+import AdminTenants from "./pages/AdminTenants";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -86,6 +88,30 @@ const App = () => (
                   <AdminRoute>
                     <DashboardLayout>
                       <Settings />
+                    </DashboardLayout>
+                  </AdminRoute>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/users"
+              element={
+                <ProtectedRoute>
+                  <AdminRoute>
+                    <DashboardLayout>
+                      <AdminUsers />
+                    </DashboardLayout>
+                  </AdminRoute>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/tenants"
+              element={
+                <ProtectedRoute>
+                  <AdminRoute>
+                    <DashboardLayout>
+                      <AdminTenants />
                     </DashboardLayout>
                   </AdminRoute>
                 </ProtectedRoute>
